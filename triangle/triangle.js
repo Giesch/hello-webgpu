@@ -76,31 +76,58 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const nums = new Float32Array([-.8, .2, .3]);
+    const a = new Float32Array([-.8, .2, .3]);
+    const b = new Float32Array([0, 0, 0]);
 
-    const workbuffer = device.createBuffer({
-        label: 'work buffer',
-        size: nums.byteLength,
+    const aBuffer = device.createBuffer({
+        label: 'a buffer',
+        size: a.byteLength,
         usage: GPUBufferUsage.STORAGE |
-            //    GPUBufferUsage.COPY_SRC |
                GPUBufferUsage.COPY_DST |
                GPUBufferUsage.VERTEX,
     });
 
-    const computeBindGroup = device.createBindGroup({
-        label: 'bindGroup for array input',
+    const bBuffer = device.createBuffer({
+        label: 'b buffer',
+        size: b.byteLength,
+        usage: GPUBufferUsage.STORAGE |
+               GPUBufferUsage.COPY_DST |
+               GPUBufferUsage.VERTEX,
+    });
+
+    const computeBindGroupAtoB = device.createBindGroup({
+        label: 'bindGroup for reading from a and writing to b',
         layout: computePipeline.getBindGroupLayout(0),
         entries: [
-            {binding: 0, resource: workbuffer}
+            {binding: 0, resource: aBuffer},
+            {binding: 1, resource: bBuffer},
         ]
-    })
+    });
 
-    const renderBindGroup = device.createBindGroup({
-        label: 'bindGroup for uniform buffer',
+    const computeBindGroupBtoA = device.createBindGroup({
+        label: 'bindGroup for reading from b and writing to a',
+        layout: computePipeline.getBindGroupLayout(0),
+        entries: [
+            {binding: 0, resource: bBuffer},
+            {binding: 1, resource: aBuffer},
+        ]
+    });
+
+    const renderBindGroupA = device.createBindGroup({
+        label: 'bindGroup for reading a in render',
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: uniformBuffer },
-            { binding: 1, resource: workbuffer }
+            { binding: 1, resource: aBuffer }
+        ]
+    });
+
+    const renderBindGroupB = device.createBindGroup({
+        label: 'bindGroup for reading b in render',
+        layout: renderPipeline.getBindGroupLayout(0),
+        entries: [
+            { binding: 0, resource: uniformBuffer },
+            { binding: 1, resource: bBuffer }
         ]
     });
 
@@ -116,9 +143,13 @@ async function main() {
         ],
     };
 
+    device.queue.writeBuffer(aBuffer, 0, a);
+    device.queue.writeBuffer(bBuffer, 0, b);
+
+    let aToB = true;
+
     function render() {
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
-        device.queue.writeBuffer(workbuffer, 0, nums);
 
         // get the current texture from the canvas context and set it as
         // the texture to render to
@@ -130,20 +161,21 @@ async function main() {
 
         const computePass = encoder.beginComputePass();
         computePass.setPipeline(computePipeline);
-        computePass.setBindGroup(0, computeBindGroup);
-        computePass.dispatchWorkgroups(nums.length);
+        computePass.setBindGroup(0, aToB ? computeBindGroupAtoB : computeBindGroupBtoA);
+        computePass.dispatchWorkgroups(a.length);
         computePass.end();
 
 
         // make a render pass encoder to render specific commands
         const renderPass = encoder.beginRenderPass(renderPassDecriptor);
         renderPass.setPipeline(renderPipeline);
-        renderPass.setBindGroup(0, renderBindGroup);
+        renderPass.setBindGroup(0, aToB ? renderBindGroupB : renderBindGroupA);
         renderPass.draw(6);
         renderPass.end();
 
         const commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]); // nothing happens until here - where the commands are all sent to the queue
+        aToB = !aToB;
     }
 
     // render();
