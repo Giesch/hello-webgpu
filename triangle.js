@@ -11,10 +11,8 @@ async function main() {
     }))?.requestDevice();
 
     // Show an error message to the user if there's no WebGPU support
-    if(!device) {        
-        const errorMessage = document.body.appendChild(document.createElement("span"));
-        errorMessage.innerText = "No WebGPU support :( "
-        console.error("No WebGPU support :(");
+    if(!device) {      
+        fail("No WebGPU support :(");
         return;
     }
 
@@ -27,6 +25,10 @@ async function main() {
     // Create a canvas we will draw to
     const canvas = document.body.appendChild(document.createElement("canvas"));
     const context = canvas.getContext('webgpu');
+    if(!context) {      
+        fail("Failed to make canvas context");
+        return;
+    }
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
         device,
@@ -174,7 +176,7 @@ async function main() {
 
     // This bool will keep track of which buffer to treat as new or old
     let aToB = true;
-    function render() {
+    const render = () => {
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
         // get the current texture from the canvas context and set it as
@@ -232,9 +234,10 @@ async function main() {
     requestAnimationFrame(frame);
 }
 
-function fail(msg) {
+const fail = (msg) => {
+    const errorMessage = document.body.appendChild(document.createElement("span"));
+    errorMessage.innerText = msg;
     console.log(msg);
-    alert(msg);
 }
 
 main();
