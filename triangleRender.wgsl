@@ -2,31 +2,52 @@ struct Uniforms {
     time : f32
 };
 
+struct Vertex {
+    @builtin(position) position: vec4f,
+    @location(0) color: vec4f
+};
+
 // Gets updated at each animation frame by the cpu
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
-@vertex fn triangles(
-    @builtin(vertex_index) vertexIndex : u32,
-) -> @builtin(position) vec4f {
-    let pos = array(
-        // First triangle - hardcoded + transforms varying on a sine wave with time
-        vec2f(0.0, -1.0 * sin(uniforms.time)),
-        vec2f(-0.5* sin(uniforms.time), -0.5),
-        vec2f(0.5, -0.5),
+const scale = 0.1;
 
-        // Second triangle - hardcoded + x shifts from nums array
-        // (gets updated in compute shader)
-        vec2f(-.1, 1.0),
-        vec2f(.2 , .8),
-        vec2f(.3, .8),
-    );
-    
-    // Use x and y position, set z to 0, w to 1
-    // w is used for perspective - unused in this example
-    return vec4f(pos[vertexIndex], 0.0, 1.0);
+const width = 6.0 * scale;
+const height = 4.0 * scale;
+
+const bottomLeft = vec3f(-(width / 2.0), 0.0, 0.0);
+const bottomRight = vec3f(width / 2.0, 0.0, 0.0);
+const bottomFar = vec3f(0.0, 0.0, height);
+const top = vec3f(0.0, height, height / 2.0);
+
+const sides = array(
+    // front
+    bottomLeft, top, bottomRight,
+    // back right
+    bottomRight, top, bottomFar,
+    // back left
+    bottomLeft, top, bottomFar,
+    // base
+    bottomLeft, bottomRight, bottomFar
+);
+
+const red = vec4f(1.0, 0.0, 0.0, 1.0);
+const green = vec4f(0.0, 1.0, 0.0, 1.0);
+const blue = vec4f(0.0, 0.0, 1.0, 1.0);
+const yellow = vec4f(0.0, 1.0, 1.0, 1.0);
+
+@vertex fn triangles(
+    @builtin(vertex_index) vertexIndex : u32
+) -> Vertex {
+    let face = vertexIndex / 3;
+    let colors = array(red, blue, green, yellow);
+    let color = colors[face];
+    let position = vec4f(sides[vertexIndex], 1.0);
+    return Vertex(position, color);
 }
 
-@fragment fn gradient(@builtin(position) pos : vec4f) -> @location(0) vec4f {
+@fragment fn gradient(vertex: Vertex) -> @location(0) vec4f {
+    let pos = vertex.position;
     // Returns RGBA color
     // In our example we multiply using sin, time and position to make fun shifting gradients
     return vec4f(pos.x/484.0 * sin(uniforms.time), pos.y/716.0, 1.0, 1.0);
