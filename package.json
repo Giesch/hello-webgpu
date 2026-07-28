@@ -1,0 +1,11 @@
+{
+  "name": "hello-webgpu",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {},
+  "devDependencies": {
+    "@webgpu/types": "^0.1.69",
+    "typescript": "^7.0.2"
+  }
+}
