@@ -176,7 +176,6 @@ async function main() {
     // Show an error message to the user if there's no WebGPU support
     if(!device) {      
         fail("No WebGPU support :(");
-        return;
     }
 
     // These errors are automatically surfaced in the chrome terminal,
@@ -190,7 +189,6 @@ async function main() {
     const context = canvas.getContext('webgpu');
     if(!context) {      
         fail("Failed to make canvas context");
-        return;
     }
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
@@ -202,7 +200,6 @@ async function main() {
     const renderResponse = await fetch("./triangleRender.wgsl");
     if(!renderResponse.ok) {
         fail("Failed to load render shaders");
-        return;
     }
     const renderShaderCode = await renderResponse.text();
 
@@ -370,10 +367,12 @@ async function main() {
     requestAnimationFrame(frame);
 }
 
+/** @type {(msg: string) => never} */
 const fail = (msg) => {
     const errorMessage = document.body.appendChild(document.createElement("span"));
     errorMessage.innerText = msg;
     console.log(msg);
+    throw new Error(msg);
 }
 
 main();
