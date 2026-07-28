@@ -45,12 +45,10 @@ const yellow = vec4f(0.0, 1.0, 1.0, 1.0);
     let colors = array(red, blue, green, yellow);
     let color = colors[face];
     let position = vec4f(sides[vertexIndex], 1.0);
+
     return Vertex(position, color);
 }
 
 @fragment fn gradient(vertex: Vertex) -> @location(0) vec4f {
-    let pos = vertex.position;
-    // Returns RGBA color
-    // In our example we multiply using sin, time and position to make fun shifting gradients
-    return vec4f(pos.x/484.0 * sin(uniforms.time), pos.y/716.0, 1.0, 1.0);
+    return vertex.color;
 }
