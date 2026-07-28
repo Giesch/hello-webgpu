@@ -335,7 +335,14 @@ async function main() {
     // Called every frame by JS
     function frame(timestamp) {
         const seconds = timestamp / 1000;
-        const matrix = mat4.rotateX(mat4.identity(), Math.PI * seconds * 0.5);
+
+        const matrix = mat4.identity();
+        mat4.orthographicProjection(canvas.width, canvas.height, 400, matrix);
+        mat4.translate(matrix, [500.0, 500.0, 0.0], matrix);
+        const rotateRadians = Math.PI * seconds * 0.5;
+        mat4.rotateX(matrix, rotateRadians, matrix);
+        mat4.rotateY(matrix, rotateRadians, matrix);
+
         uniformData.set(matrix, 0);
         uniformData[16] = seconds;
 

@@ -11,7 +11,7 @@ struct Vertex {
 // Gets updated at each animation frame by the cpu
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
-const scale = 0.1;
+const scale = 50;
 
 const width = 6.0 * scale;
 const height = 4.0 * scale;
