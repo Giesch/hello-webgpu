@@ -159,18 +159,23 @@ async function main() {
         ]
     });
 
+    /** @type {GPURenderPassColorAttachment} */
+    const colorAttachment = {
+        // Sets background color in RGBA
+        clearValue: [.3, .3, .3, 1],
+        // Clear the background each frame
+        loadOp: 'clear',
+        // Save the new pixel data to the canvas
+        storeOp: 'store',
+        view: context.getCurrentTexture().createView()
+    };
+
     // Describes how things should get rendered to the canvas
+    /** @type {GPURenderPassDescriptor} */
     const renderPassDecriptor = {
         label: 'canvas renderPass',
         colorAttachments: [
-            {
-                // Sets background color in RGBA
-                clearValue: [.3, .3, .3, 1],
-                // Clear the background each frame
-                loadOp: 'clear',
-                // Save the new pixel data to the canvas
-                storeOp: 'store'
-            }
+            colorAttachment
         ],
     };
 
@@ -181,8 +186,7 @@ async function main() {
 
         // get the current texture from the canvas context and set it as
         // the texture to render to
-        renderPassDecriptor.colorAttachments[0].view = 
-            context.getCurrentTexture().createView();
+        colorAttachment.view = context.getCurrentTexture().createView();
 
         // command encoder encodes commands
         const encoder = device.createCommandEncoder({ label: 'myEncoder'});
