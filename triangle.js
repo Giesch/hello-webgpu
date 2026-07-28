@@ -63,6 +63,14 @@ async function main() {
             module: renderModule,
             targets: [{ format: presentationFormat }],
         },
+      primitive: {
+        cullMode: 'none',
+      },
+      depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        format: 'depth24plus'
+      }
     });
 
     // Create a uniform. This is where we'll pass the timestamp of each frame from the CPU to the GPU
@@ -85,6 +93,7 @@ async function main() {
         ]
     });
 
+  let canvasTexture = context.getCurrentTexture();
     /** @type {GPURenderPassColorAttachment} */
     const colorAttachment = {
         // Sets background color in RGBA
@@ -93,26 +102,52 @@ async function main() {
         loadOp: 'clear',
         // Save the new pixel data to the canvas
         storeOp: 'store',
-        view: context.getCurrentTexture().createView()
+        view: canvasTexture.createView()
+    };
+
+    let depthTexture = device.createTexture({
+        size: [canvasTexture.width, canvasTexture.height],
+        format: 'depth24plus',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
+    });
+
+    /** @type {GPURenderPassDepthStencilAttachment} */
+    let depthStencilAttachment = {
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store',
+        view: depthTexture.createView()
     };
 
     // Describes how things should get rendered to the canvas
     /** @type {GPURenderPassDescriptor} */
     const renderPassDecriptor = {
         label: 'canvas renderPass',
-        colorAttachments: [
-            colorAttachment
-        ],
+        colorAttachments: [colorAttachment],
+        depthStencilAttachment
     };
 
     // This bool will keep track of which buffer to treat as new or old
 
     const render = () => {
+        canvasTexture = context.getCurrentTexture();
+
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
         // get the current texture from the canvas context and set it as
         // the texture to render to
-        colorAttachment.view = context.getCurrentTexture().createView();
+        colorAttachment.view = canvasTexture.createView();
+
+        if (depthTexture.width !== canvasTexture.width ||
+            depthTexture.height !== canvasTexture.height) {
+          depthTexture.destroy();
+          depthTexture = device.createTexture({
+                size: [canvasTexture.width, canvasTexture.height],
+                format: 'depth24plus',
+                usage: GPUTextureUsage.RENDER_ATTACHMENT
+            });
+        }
+        depthStencilAttachment.view = depthTexture.createView();
 
         // command encoder encodes commands
         const encoder = device.createCommandEncoder({ label: 'myEncoder'});
@@ -123,7 +158,7 @@ async function main() {
         // Swap which buffers we are using each frame
         renderPass.setBindGroup(0, renderBindGroup);
         // Draw 3 vertices for each triangle
-        renderPass.draw(6);
+        renderPass.draw(12);
         renderPass.end();
 
         const commandBuffer = encoder.finish();
