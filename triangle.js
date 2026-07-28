@@ -1,6 +1,7 @@
 // https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html
 
 async function main() {
+    // Gets the GPU object to interact with from the browser
     const adapter = await navigator.gpu?.requestAdapter();
     const device = await adapter?.requestDevice();
     if(!device) {
@@ -12,8 +13,8 @@ async function main() {
         console.error("WebGPU Error:", event.error.message);
     });
 
+    // Gets the canvas from the HTML that we will be drawing to
     const canvas = document.querySelector('canvas');
-
     const context = canvas.getContext('webgpu');
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
@@ -37,16 +38,17 @@ async function main() {
     }
     const computeShaderCode = await computeResponse.text();
 
+    // Compiles the shader code
     const renderModule = device.createShaderModule({
         label: 'render triangle',
         code: renderShaderCode,
     });
-
     const computeModule = device.createShaderModule({
         label: 'compute triangle',
         code: computeShaderCode
     });
 
+    // Describes the steps of our compute pipeline: just our single shader
     const computePipeline = device.createComputePipeline({
         label: 'compute triangle pipeline',
         layout: 'auto',
@@ -55,11 +57,13 @@ async function main() {
         }
     });
 
+    // Describes the steps of our render pipeline:
+    // First the vertex shader, then the fragment shader
     const renderPipeline = device.createRenderPipeline({
         label: 'render triangle pipline',
         layout: 'auto',
         vertex: { 
-            entryPoint: 'hardcodedTriangles',
+            entryPoint: 'triangles',
             module: renderModule,
         },
         fragment: {
@@ -69,6 +73,7 @@ async function main() {
         },
     });
 
+    // Create a uniform. This is where we'll pass the timestamp of each frame from the CPU to the GPU
     const uniformFloatCount = 1; // We only have one f32 in our uniform
     const uniformData = new Float32Array(uniformFloatCount); // allocate an array (CPU-side) to hold our uniform
 
@@ -78,9 +83,12 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    // Allocate CPU-side empty arrays for the data we'll transform in the compute shader
+    // We will alternate between these arrays to avoid race conditions
     const a = new Float32Array([0, 0, 0]);
     const b = new Float32Array([0, 0, 0]);
 
+    // GPU side buffers for the data
     const aBuffer = device.createBuffer({
         label: 'a buffer',
         size: a.byteLength,
@@ -88,7 +96,6 @@ async function main() {
                GPUBufferUsage.COPY_DST |
                GPUBufferUsage.VERTEX,
     });
-
     const bBuffer = device.createBuffer({
         label: 'b buffer',
         size: b.byteLength,
@@ -97,6 +104,11 @@ async function main() {
                GPUBufferUsage.VERTEX,
     });
 
+    // Copies our CPU side array to the GPU buffer
+    device.queue.writeBuffer(aBuffer, 0, a);
+    device.queue.writeBuffer(bBuffer, 0, b);
+
+    // In this bind group, we'll treat A as the old data and B as the new data
     const computeBindGroupAtoB = device.createBindGroup({
         label: 'bindGroup for reading from a and writing to b',
         layout: computePipeline.getBindGroupLayout(0),
@@ -105,7 +117,7 @@ async function main() {
             {binding: 1, resource: bBuffer},
         ]
     });
-
+    // In this bind group, we'll treat B as the old data and A as the new data
     const computeBindGroupBtoA = device.createBindGroup({
         label: 'bindGroup for reading from b and writing to a',
         layout: computePipeline.getBindGroupLayout(0),
@@ -115,6 +127,7 @@ async function main() {
         ]
     });
 
+    // In this bind group we'll render A
     const renderBindGroupA = device.createBindGroup({
         label: 'bindGroup for reading a in render',
         layout: renderPipeline.getBindGroupLayout(0),
@@ -123,7 +136,7 @@ async function main() {
             { binding: 1, resource: aBuffer }
         ]
     });
-
+    // In this bind group we'll render B
     const renderBindGroupB = device.createBindGroup({
         label: 'bindGroup for reading b in render',
         layout: renderPipeline.getBindGroupLayout(0),
@@ -133,22 +146,23 @@ async function main() {
         ]
     });
 
+    // Describes how things should get rendered to the canvas
     const renderPassDecriptor = {
         label: 'canvas renderPass',
         colorAttachments: [
             {
+                // Sets background color in RGBA
                 clearValue: [.3, .3, .3, 1],
+                // Clear the background each frame
                 loadOp: 'clear',
+                // Save the new pixel data to the canvas
                 storeOp: 'store'
             }
         ],
     };
 
-    device.queue.writeBuffer(aBuffer, 0, a);
-    device.queue.writeBuffer(bBuffer, 0, b);
-
+    // This bool will keep track of which buffer to treat as new or old
     let aToB = true;
-
     function render() {
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
@@ -193,16 +207,17 @@ async function main() {
             canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
         }
     });
-
     observer.observe(canvas);
 
-
+    // Called every frame by JS
     function frame(timestamp) {
         uniformData[0] = timestamp / 1000;
         render();
+        // request to re-run this function again next animation frame
         requestAnimationFrame(frame);
     }
 
+    // Start the first frame of animation
     requestAnimationFrame(frame);
 }
 
