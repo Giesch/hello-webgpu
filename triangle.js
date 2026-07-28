@@ -21,6 +21,7 @@ async function main() {
         format: presentationFormat,
     });
 
+    // Load render shader code
     const renderResponse = await fetch("./triangleRender.wgsl");
     if(!renderResponse.ok) {
         fail("Failed to load render shaders");
@@ -28,6 +29,7 @@ async function main() {
     }
     const renderShaderCode = await renderResponse.text();
 
+    //load compute shader code
     const computeResponse = await fetch("./triangleCompute.wgsl");
     if(!computeResponse.ok) {
         fail("Failed to load compute shaders");
@@ -67,16 +69,16 @@ async function main() {
         },
     });
 
-    const uniformCount = 2;
-    const uniformData = new Float32Array(uniformCount);
+    const uniformFloatCount = 1; // We only have one f32 in our uniform
+    const uniformData = new Float32Array(uniformFloatCount); // allocate an array (CPU-side) to hold our uniform
 
-
+    // Allocate a buffer (GPU-side) to hold the uniform data
     const uniformBuffer = device.createBuffer({
-        size: 4 * uniformCount, // 4 bytes per float
+        size: 4 * uniformFloatCount, // 4 bytes per float
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const a = new Float32Array([-.8, .2, .3]);
+    const a = new Float32Array([0, 0, 0]);
     const b = new Float32Array([0, 0, 0]);
 
     const aBuffer = device.createBuffer({
@@ -135,7 +137,6 @@ async function main() {
         label: 'canvas renderPass',
         colorAttachments: [
             {
-                // view <- gets filled in in first line of render() (why?)
                 clearValue: [.3, .3, .3, 1],
                 loadOp: 'clear',
                 storeOp: 'store'
@@ -156,11 +157,12 @@ async function main() {
         renderPassDecriptor.colorAttachments[0].view = 
             context.getCurrentTexture().createView();
 
-        // command encoder encodes commands [Ed: :|]
+        // command encoder encodes commands
         const encoder = device.createCommandEncoder({ label: 'myEncoder'});
 
         const computePass = encoder.beginComputePass();
         computePass.setPipeline(computePipeline);
+        // Swap which buffers we are using each frame
         computePass.setBindGroup(0, aToB ? computeBindGroupAtoB : computeBindGroupBtoA);
         computePass.dispatchWorkgroups(a.length);
         computePass.end();
@@ -169,17 +171,19 @@ async function main() {
         // make a render pass encoder to render specific commands
         const renderPass = encoder.beginRenderPass(renderPassDecriptor);
         renderPass.setPipeline(renderPipeline);
+        // Swap which buffers we are using each frame
         renderPass.setBindGroup(0, aToB ? renderBindGroupB : renderBindGroupA);
+        // Draw 3 vertices for each triangle
         renderPass.draw(6);
         renderPass.end();
 
         const commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]); // nothing happens until here - where the commands are all sent to the queue
-        aToB = !aToB;
+        aToB = !aToB; // flip our buffers
     }
 
-    // render();
 
+    // Used to resize canvas to fullscreen when window changes size
     const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
             const canvas = entry.target;
@@ -188,17 +192,14 @@ async function main() {
             canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
             canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
         }
-
-        // render();
     });
 
     observer.observe(canvas);
 
+
     function frame(timestamp) {
         uniformData[0] = timestamp / 1000;
-        uniformData[1] += -.001;
         render();
-
         requestAnimationFrame(frame);
     }
 
