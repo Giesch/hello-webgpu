@@ -5,6 +5,7 @@
 // Consider using the "wgsl-analyzer" in VS Code to syntax hilight the WGSL
 
 const mat4 = {
+  /** @type{(width: number, height: number, depth: number, dst?: Float32Array) => Float32Array} */
   orthographicProjection(width, height, depth, dst) {
     // Note: This matrix flips the Y axis so that 0 is at the top.
     dst = dst || new Float32Array(16);
@@ -15,6 +16,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(dst?: Float32Array) => Float32Array} */
   identity(dst) {
     dst = dst || new Float32Array(16);
     dst[ 0] = 1;  dst[ 1] = 0;  dst[ 2] = 0;   dst[ 3] = 0;
@@ -24,6 +26,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(a: Float32Array, b: Float32Array, dst?: Float32Array) => Float32Array} */
   multiply(a, b, dst) {
     dst = dst || new Float32Array(16);
     const b00 = b[0 * 4 + 0];
@@ -82,6 +85,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(t: [tx: number, ty: number, tz: number], dst?: Float32Array) => Float32Array} */
   translation([tx, ty, tz], dst) {
     dst = dst || new Float32Array(16);
     dst[ 0] = 1;   dst[ 1] = 0;   dst[ 2] = 0;   dst[ 3] = 0;
@@ -91,6 +95,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(angleInRadians: number, dst?: Float32Array) => Float32Array} */
   rotationX(angleInRadians, dst) {
     const c = Math.cos(angleInRadians);
     const s = Math.sin(angleInRadians);
@@ -102,6 +107,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(angleInRadians: number, dst?: Float32Array) => Float32Array} */
   rotationY(angleInRadians, dst) {
     const c = Math.cos(angleInRadians);
     const s = Math.sin(angleInRadians);
@@ -113,6 +119,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(angleInRadians: number, dst?: Float32Array) => Float32Array} */
   rotationZ(angleInRadians, dst) {
     const c = Math.cos(angleInRadians);
     const s = Math.sin(angleInRadians);
@@ -124,6 +131,7 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(s: [sx: number, sy: number, sz: number], dst?: Float32Array) => Float32Array} */
   scaling([sx, sy, sz], dst) {
     dst = dst || new Float32Array(16);
     dst[ 0] = sx;  dst[ 1] = 0;   dst[ 2] = 0;    dst[ 3] = 0;
@@ -133,22 +141,27 @@ const mat4 = {
     return dst;
   },
 
+  /** @type{(m: Float32Array, translation: [number, number, number], dst?: Float32Array) => Float32Array} */
   translate(m, translation, dst) {
     return mat4.multiply(m, mat4.translation(translation), dst);
   },
 
+  /** @type{(m: Float32Array, angleInRadians: number, dst?: Float32Array) => Float32Array} */
   rotateX(m, angleInRadians, dst) {
     return mat4.multiply(m, mat4.rotationX(angleInRadians), dst);
   },
 
+  /** @type{(m: Float32Array, angleInRadians: number, dst?: Float32Array) => Float32Array} */
   rotateY(m, angleInRadians, dst) {
     return mat4.multiply(m, mat4.rotationY(angleInRadians), dst);
   },
 
+  /** @type{(m: Float32Array, angleInRadians: number, dst?: Float32Array) => Float32Array} */
   rotateZ(m, angleInRadians, dst) {
     return mat4.multiply(m, mat4.rotationZ(angleInRadians), dst);
   },
 
+  /** @type{(m: Float32Array, scale: [number, number, number], dst?: Float32Array) => Float32Array} */
   scale(m, scale, dst) {
     return mat4.multiply(m, mat4.scaling(scale), dst);
   },
@@ -333,6 +346,7 @@ async function main() {
     observer.observe(canvas);
 
     // Called every frame by JS
+    /** @type{(timestamp: number) => void} */
     function frame(timestamp) {
         const seconds = timestamp / 1000;
 
