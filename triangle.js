@@ -6,19 +6,26 @@
 
 async function main() {
     // Gets the GPU object to interact with from the browser
-    const adapter = await navigator.gpu?.requestAdapter();
-    const device = await adapter?.requestDevice();
-    if(!device) {
-        fail('need a browser that supports WebGPU');
+    const device = await (await navigator.gpu?.requestAdapter( {
+        powerPreference: "high-performance",
+    }))?.requestDevice();
+
+    // Show an error message to the user if there's no WebGPU support
+    if(!device) {        
+        const errorMessage = document.body.appendChild(document.createElement("span"));
+        errorMessage.innerText = "No WebGPU support :( "
+        console.error("No WebGPU support :(");
         return;
     }
 
+    // These errors are automatically surfaced in the chrome terminal,
+    // but need to be explicitly listened for on webkit
     device.addEventListener('uncapturederror', event => {
         console.error("WebGPU Error:", event.error.message);
     });
 
-    // Gets the canvas from the HTML that we will be drawing to
-    const canvas = document.querySelector('canvas');
+    // Create a canvas we will draw to
+    const canvas = document.body.appendChild(document.createElement("canvas"));
     const context = canvas.getContext('webgpu');
     const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
