@@ -43,31 +43,10 @@ async function main() {
     }
     const renderShaderCode = await renderResponse.text();
 
-    //load compute shader code
-    const computeResponse = await fetch("./triangleCompute.wgsl");
-    if(!computeResponse.ok) {
-        fail("Failed to load compute shaders");
-        return;
-    }
-    const computeShaderCode = await computeResponse.text();
-
     // Compiles the shader code
     const renderModule = device.createShaderModule({
         label: 'render triangle',
         code: renderShaderCode,
-    });
-    const computeModule = device.createShaderModule({
-        label: 'compute triangle',
-        code: computeShaderCode
-    });
-
-    // Describes the steps of our compute pipeline: just our single shader
-    const computePipeline = device.createComputePipeline({
-        label: 'compute triangle pipeline',
-        layout: 'auto',
-        compute: {
-            module: computeModule
-        }
     });
 
     // Describes the steps of our render pipeline:
@@ -96,66 +75,13 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // Allocate CPU-side empty arrays for the data we'll transform in the compute shader
-    // We will alternate between these arrays to avoid race conditions
-    const a = new Float32Array([0, 0, 0]);
-    const b = new Float32Array([0, 0, 0]);
-
-    // GPU side buffers for the data
-    const aBuffer = device.createBuffer({
-        label: 'a buffer',
-        size: a.byteLength,
-        usage: GPUBufferUsage.STORAGE |
-               GPUBufferUsage.COPY_DST |
-               GPUBufferUsage.VERTEX,
-    });
-    const bBuffer = device.createBuffer({
-        label: 'b buffer',
-        size: b.byteLength,
-        usage: GPUBufferUsage.STORAGE |
-               GPUBufferUsage.COPY_DST |
-               GPUBufferUsage.VERTEX,
-    });
-
-    // Copies our CPU side array to the GPU buffer
-    device.queue.writeBuffer(aBuffer, 0, a);
-    device.queue.writeBuffer(bBuffer, 0, b);
-
-    // In this bind group, we'll treat A as the old data and B as the new data
-    const computeBindGroupAtoB = device.createBindGroup({
-        label: 'bindGroup for reading from a and writing to b',
-        layout: computePipeline.getBindGroupLayout(0),
-        entries: [
-            {binding: 0, resource: aBuffer},
-            {binding: 1, resource: bBuffer},
-        ]
-    });
-    // In this bind group, we'll treat B as the old data and A as the new data
-    const computeBindGroupBtoA = device.createBindGroup({
-        label: 'bindGroup for reading from b and writing to a',
-        layout: computePipeline.getBindGroupLayout(0),
-        entries: [
-            {binding: 0, resource: bBuffer},
-            {binding: 1, resource: aBuffer},
-        ]
-    });
 
     // In this bind group we'll render A
-    const renderBindGroupA = device.createBindGroup({
+    const renderBindGroup = device.createBindGroup({
         label: 'bindGroup for reading a in render',
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: uniformBuffer },
-            { binding: 1, resource: aBuffer }
-        ]
-    });
-    // In this bind group we'll render B
-    const renderBindGroupB = device.createBindGroup({
-        label: 'bindGroup for reading b in render',
-        layout: renderPipeline.getBindGroupLayout(0),
-        entries: [
-            { binding: 0, resource: uniformBuffer },
-            { binding: 1, resource: bBuffer }
         ]
     });
 
@@ -180,7 +106,7 @@ async function main() {
     };
 
     // This bool will keep track of which buffer to treat as new or old
-    let aToB = true;
+
     const render = () => {
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
 
@@ -191,26 +117,17 @@ async function main() {
         // command encoder encodes commands
         const encoder = device.createCommandEncoder({ label: 'myEncoder'});
 
-        const computePass = encoder.beginComputePass();
-        computePass.setPipeline(computePipeline);
-        // Swap which buffers we are using each frame
-        computePass.setBindGroup(0, aToB ? computeBindGroupAtoB : computeBindGroupBtoA);
-        computePass.dispatchWorkgroups(a.length);
-        computePass.end();
-
-
         // make a render pass encoder to render specific commands
         const renderPass = encoder.beginRenderPass(renderPassDecriptor);
         renderPass.setPipeline(renderPipeline);
         // Swap which buffers we are using each frame
-        renderPass.setBindGroup(0, aToB ? renderBindGroupB : renderBindGroupA);
+        renderPass.setBindGroup(0, renderBindGroup);
         // Draw 3 vertices for each triangle
         renderPass.draw(6);
         renderPass.end();
 
         const commandBuffer = encoder.finish();
         device.queue.submit([commandBuffer]); // nothing happens until here - where the commands are all sent to the queue
-        aToB = !aToB; // flip our buffers
     }
 
 

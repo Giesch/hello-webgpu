@@ -5,9 +5,6 @@ struct Uniforms {
 // Gets updated at each animation frame by the cpu
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
-// Gets modified in compute shader
-@group(0) @binding(1) var<storage, read> nums : array<f32>;
-
 @vertex fn triangles(
     @builtin(vertex_index) vertexIndex : u32,
 ) -> @builtin(position) vec4f {
@@ -19,9 +16,9 @@ struct Uniforms {
 
         // Second triangle - hardcoded + x shifts from nums array
         // (gets updated in compute shader)
-        vec2f(-.1 + nums[0], 1.0),
-        vec2f(.2 + nums[1], .8),
-        vec2f(.3 + nums[2], .8),
+        vec2f(-.1, 1.0),
+        vec2f(.2 , .8),
+        vec2f(.3, .8),
     );
     
     // Use x and y position, set z to 0, w to 1
