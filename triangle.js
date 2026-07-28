@@ -342,8 +342,10 @@ async function main() {
     });
     observer.observe(canvas);
 
-    // Called every frame by JS
-    /** @type{(timestamp: number) => void} */
+    /**
+     * Called every frame by JS
+     * @type{(timestamp: number) => void}
+     */
     function frame(timestamp) {
         const seconds = timestamp / 1000;
 
