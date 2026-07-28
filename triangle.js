@@ -1,4 +1,8 @@
+// Adapted from
 // https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html
+// Great place to get more detailed descriptions on all of this!
+
+// Consider using the "wgsl-analyzer" in VS Code to syntax hilight the WGSL
 
 async function main() {
     // Gets the GPU object to interact with from the browser
