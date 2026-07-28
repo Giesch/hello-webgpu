@@ -39,6 +39,8 @@ const yellow = vec4f(0.0, 1.0, 1.0, 1.0);
 @vertex fn triangles(
     @builtin(vertex_index) vertexIndex : u32
 ) -> Vertex {
+    _ = uniforms.time;
+
     let face = vertexIndex / 3;
     let colors = array(red, blue, green, yellow);
     let color = colors[face];
