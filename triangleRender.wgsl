@@ -1,6 +1,6 @@
 struct Uniforms {
-    // in seconds
-    time : f32
+    matrix: mat4x4f,
+    seconds : f32
 };
 
 struct Vertex {
@@ -38,39 +38,14 @@ const green = vec4f(0.0, 0.0, 1.0, 1.0);
 const yellow = vec4f(0.0, 1.0, 1.0, 1.0);
 const colors = array(red, blue, green, yellow);
 
-const pi = 3.14159265358979;
-
-fn makeRotateX(theta: f32) -> mat4x4<f32> {
-    return mat4x4f(
-        1.0, 0.0,         0.0,        0.0,
-        0.0, cos(theta),  sin(theta), 0.0,
-        0.0, -sin(theta), cos(theta), 0.0,
-        0.0, 0.0,         0.0,        1.0
-    );
-}
-
 @vertex fn triangles(
     @builtin(vertex_index) vertexIndex : u32
 ) -> Vertex {
     let face = vertexIndex / 3;
     let color = colors[face];
+    let position = vec4f(sides[vertexIndex], 1.0);
 
-    var position = vec4f(sides[vertexIndex], 1.0);
-    // position.x += width * uniforms.time;
-
-    let translateX = mat4x4f(
-        1.0, 0.0, 0.0, width * uniforms.time,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    );
-
-    let rotateX = makeRotateX(pi * 0.1 * uniforms.time);
-
-    // return Vertex(position, color);
-    // return Vertex(rotateX * position, color);
-    return Vertex(translateX * position, color);
-    // return Vertex(rotateX * translateX * position, color);
+    return Vertex(uniforms.matrix * position, color);
 }
 
 @fragment fn gradient(vertex: Vertex) -> @location(0) vec4f {
