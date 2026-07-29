@@ -11,7 +11,9 @@ struct Vertex {
 // Gets updated at each animation frame by the cpu
 @group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
-const scale = 50;
+@group(0) @binding(1) var<storage, read> instances : array<mat4x4f>;
+
+const scale = 4;
 
 const width = 6.0 * scale;
 const height = 4.0 * scale;
@@ -39,15 +41,15 @@ const yellow = vec4f(0.0, 1.0, 1.0, 1.0);
 const colors = array(red, blue, green, yellow);
 
 @vertex fn triangles(
-    @builtin(vertex_index) vertexIndex : u32
+    @builtin(vertex_index) vertexIndex : u32,
+    @builtin(instance_index) instanceIndex : u32
 ) -> Vertex {
     let face = vertexIndex / 3;
     let color = colors[face];
-    let position = vec4f(sides[vertexIndex], 1.0);
-
-    return Vertex(uniforms.matrix * position, color);
+    var position = vec4f(sides[vertexIndex], 1.0);
+    return Vertex(uniforms.matrix * instances[instanceIndex] * position, color);
 }
 
 @fragment fn gradient(vertex: Vertex) -> @location(0) vec4f {
-    return vertex.color;
+    return vertex.color * vertex.position.y/500;
 }

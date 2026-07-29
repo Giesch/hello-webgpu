@@ -245,6 +245,31 @@ async function main() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    const matSize = 64;
+    const floatsPerMat = matSize / 4;
+    const matRows = 50;
+    const matCols = 50;
+    const matDepths = 50;
+    const matCount = matRows * matCols*matDepths;
+    const mats = new Float32Array(floatsPerMat * matCount);
+    for(let i = 0; i <matRows; i++) {
+        for(let j = 0; j < matCols; j++) {
+            for(let k = 0; k < matDepths; k++) {
+                const mat = mat4.identity();
+                //mat4.translate(mat, [i*30, j*30, k*30], mat);
+                mat4.translate(mat, [Math.random() *i*500,Math.random() * j*500,Math.random() * k*500], mat);
+                mat4.rotateX(mat, i*j*k, mat);
+                mats.set(mat, (((i*matRows*matCols)+(j*matCols))+k)*floatsPerMat);
+            }
+        }
+    }
+
+    const matBuffer = device.createBuffer({
+        size: mats.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+
+    device.queue.writeBuffer(matBuffer, 0, mats);
 
     // In this bind group we'll render A
     const renderBindGroup = device.createBindGroup({
@@ -252,6 +277,7 @@ async function main() {
         layout: renderPipeline.getBindGroupLayout(0),
         entries: [
             { binding: 0, resource: uniformBuffer },
+            { binding: 1, resource: matBuffer}
         ]
     });
 
@@ -320,7 +346,7 @@ async function main() {
         // Swap which buffers we are using each frame
         renderPass.setBindGroup(0, renderBindGroup);
         // Draw 3 vertices for each triangle
-        renderPass.draw(12);
+        renderPass.draw(12, matCount);
         renderPass.end();
 
         const commandBuffer = encoder.finish();
@@ -350,8 +376,8 @@ async function main() {
         const seconds = timestamp / 1000;
 
         const matrix = mat4.identity();
-        mat4.orthographicProjection(canvas.width, canvas.height, 400, matrix);
-        mat4.translate(matrix, [500.0, 500.0, 0.0], matrix);
+        mat4.orthographicProjection(canvas.width, canvas.height, 4000, matrix);
+        mat4.translate(matrix, [300.0, 300, 0.0], matrix);
         const rotateRadians = Math.PI * seconds * 0.5;
         mat4.rotateX(matrix, rotateRadians, matrix);
         mat4.rotateY(matrix, rotateRadians, matrix);
